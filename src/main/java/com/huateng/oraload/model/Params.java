@@ -12,6 +12,7 @@ import java.io.File;
 @ToString
 public class Params {
 
+    private @Getter @Setter String database; // 数据库
     private @Getter @Setter String table_name; // 导入或卸载表名
     private @Getter @Setter String dest_file; //导入或者卸载的文件数据路径（绝对路径）
     private @Getter @Setter String sqrt;//分隔符

@@ -42,7 +42,7 @@ public class ImportData {
         }
 
         if(!StringUtils.isBlank(this.params.getSql())){
-            String tmpSql = "select * from (" + this.params.getSql() + ") where rownum < 1";
+            //String tmpSql = "select * from (" + this.params.getSql() + ") where rownum < 1";
             String []fields = HikariCPManager.singleQuery2(this.params.getSql(), new AbstractDAO<String[]>() {
                 @Override
                 public String[] mapping(ResultSet rs) throws SQLException {

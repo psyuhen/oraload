@@ -40,24 +40,17 @@ public class HikariCPManager {
 		}
 	}*/
 
-	public static void resetConnection(DBParams dbParams){
+	public static void resetConnection(DBInfo dbInfo){
 		if(ds != null){
 			ds = null;
 		}
 
 		try{
 			Properties properties = new Properties();
-			properties.setProperty("dataSourceClassName", "oracle.jdbc.pool.OracleDataSource");
-			String url = "jdbc:oracle:thin:@";
-			if(StringUtils.isBlank(dbParams.getUrl())){
-				url += dbParams.getIp() + ":" + dbParams.getPort() + ":" + dbParams.getService();
-			}else{
-				url += dbParams.getUrl();
-			}
-			LOGGER.info("url==>" + url);
-			properties.setProperty("dataSource.url", url);
-			properties.setProperty("dataSource.user", dbParams.getUsername());
-			properties.setProperty("dataSource.password", dbParams.getPassword());
+			properties.setProperty("dataSourceClassName", dbInfo.getDSCls());
+			properties.setProperty("dataSource.url", dbInfo.getUrl());
+			properties.setProperty("dataSource.user", dbInfo.getUser());
+			properties.setProperty("dataSource.password", dbInfo.getPwd());
 			HikariDataSource bds = new HikariDataSource(new HikariConfig(properties));
 
 			ds = bds;

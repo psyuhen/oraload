@@ -1,6 +1,9 @@
 package com.huateng.oraload;
 
+import com.huateng.oraload.db.DBInfo;
 import com.huateng.oraload.db.HikariCPManager;
+import com.huateng.oraload.db.Mysql;
+import com.huateng.oraload.db.Oracle;
 import com.huateng.oraload.imp.ImportData;
 import com.huateng.oraload.model.DBParams;
 import com.huateng.oraload.model.Params;
@@ -59,6 +62,7 @@ public class App {
         options.addOption("url", "url", true, "DataBase url, eg: localhost:1521:testdb");
         options.addOption("unload", "unload", false, "unload start");
         options.addOption("imp", "imp", false, "import start");
+        options.addOption("db", "database", true, "which database");
 
         CommandLineParser commandLineParser = new BasicParser();
         try {
@@ -108,6 +112,9 @@ public class App {
                     }else if(StringUtils.equals("sqrt", opt)){
                         params.setSqrt(nextValue);
                         LOGGER.info("get sqrt:" + nextValue);
+                    }else if(StringUtils.equals("db", opt)){
+                        params.setDatabase(nextValue);
+                        LOGGER.info("get db:" + nextValue);
                     }
                 }
                 LOGGER.info("DB params:" + dbParams);
@@ -115,7 +122,13 @@ public class App {
 
 
                 if(!StringUtils.isBlank(dbParams.getUsername())){
-                    HikariCPManager.resetConnection(dbParams);
+                    DBInfo dbInfo= null;
+                    if("mysql".equalsIgnoreCase(params.getDatabase())){
+                        dbInfo = new Mysql(dbParams);
+                    }else if("oracle".equalsIgnoreCase(params.getDatabase())){
+                        dbInfo = new Oracle(dbParams);
+                    }
+                    HikariCPManager.resetConnection(dbInfo);
                 }
 
                 if(cmd.hasOption("unload")){
