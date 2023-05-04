@@ -3,10 +3,7 @@
  */
 package com.huateng.oraload.util;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,22 +31,39 @@ public class StreamUtil {
 		}catch (IOException e){
 			LOGGER.error("读取输入流数据异常",e);
 		}finally{
-			if(isr != null){
-				try {
-					isr.close();
-				} catch (IOException e) {
-					LOGGER.error("关闭InputStreamReader异常",e);
-				}
-			}
-			if(br != null){
-				try {
-					br.close();
-				} catch (IOException e) {
-					LOGGER.error("关闭BufferedReader异常",e);
-				}
-			}
+			close(isr);
+			close(br);
 		}
 		
 		return out;
+	}
+
+	/**
+	 * 关闭流
+	 * @param closeable 流
+	 */
+	public static void close(Closeable closeable) {
+		try {
+			if (closeable != null) {
+				closeable.close();
+			}
+		} catch (IOException e) {
+			LOGGER.error("关闭流异常:"+e.getMessage(), e);
+		}
+
+	}
+	/**
+	 * 关闭流
+	 * @param closeable 流
+	 */
+	public static void close(AutoCloseable closeable) {
+		try {
+			if (closeable != null) {
+				closeable.close();
+			}
+		} catch (Exception e) {
+			LOGGER.error("关闭异常:", e);
+		}
+
 	}
 }

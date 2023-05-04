@@ -1,19 +1,23 @@
 package com.huateng.oraload;
 
-import com.huateng.oraload.db.DBInfo;
-import com.huateng.oraload.db.HikariCPManager;
-import com.huateng.oraload.db.Mysql;
-import com.huateng.oraload.db.Oracle;
-import com.huateng.oraload.imp.ImportData;
-import com.huateng.oraload.model.DBParams;
-import com.huateng.oraload.model.Params;
-import com.huateng.oraload.unload.Unload;
-import org.apache.commons.cli.*;
+import java.util.Iterator;
+
+import com.huateng.oraload.db.*;
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.util.Iterator;
+import com.huateng.oraload.imp.ImportData;
+import com.huateng.oraload.model.DBParams;
+import com.huateng.oraload.model.Params;
+import com.huateng.oraload.unload.Unload;
 
 /**
  * Hello world!
@@ -44,6 +48,7 @@ public class App {
 
         App app = new App(args);
         app.commandLine();
+        
     }
 
     private void commandLine(){
@@ -122,12 +127,46 @@ public class App {
 
 
                 if(!StringUtils.isBlank(dbParams.getUsername())){
-                    DBInfo dbInfo= null;
-                    if("mysql".equalsIgnoreCase(params.getDatabase())){
-                        dbInfo = new Mysql(dbParams);
-                    }else if("oracle".equalsIgnoreCase(params.getDatabase())){
-                        dbInfo = new Oracle(dbParams);
+                    AbstractDataBase dbInfo= null;
+                    final String database = params.getDatabase();
+                    if("mysql".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.MYSQL);
+                        dbInfo = new Mysql();
+                    }else if("oracle".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.ORACLE);
+                        dbInfo = new Oracle();
+                    }else if("db2".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.DB2);
+                        dbInfo = new Db2();
+                    }else if("derby".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.DERBY);
+                        dbInfo = new Derby();
+                    }else if("h2".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.H2);
+                        dbInfo = new H2();
+                    }else if("hsqldb".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.HSQLDB);
+                        dbInfo = new Hsqldb();
+                    }else if("informix".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.INFORMIX);
+                        dbInfo = new Informix();
+                    }else if("postgresql".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.POSTGRESQL);
+                        dbInfo = new PostgreSql();
+                    }else if("sqlite".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.SQLITE);
+                        dbInfo = new Sqlite();
+                    }else if("sqlserver".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.SQLSERVER);
+                        dbInfo = new Sqlserver();
+                    }else if("sybase".equalsIgnoreCase(database)){
+                        dbParams.setDatabase(DataBase.SYBASE);
+                        dbInfo = new SyBase();
+                    }else{
+                        LOGGER.error("UNKNOWN DATABASE:" + database);
+                        System.exit(1);
                     }
+                    dbInfo.setDbParams(dbParams);
                     HikariCPManager.resetConnection(dbInfo);
                 }
 

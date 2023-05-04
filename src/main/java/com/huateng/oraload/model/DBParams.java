@@ -1,5 +1,6 @@
 package com.huateng.oraload.model;
 
+import com.huateng.oraload.db.DataBase;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -9,6 +10,7 @@ import lombok.ToString;
  */
 @ToString
 public class DBParams {
+    private @Getter @Setter DataBase database; // 数据库
     private @Getter @Setter String password; // 密码
     private @Getter @Setter String username; // 用户名
     private @Getter @Setter String service; // SID或者service name

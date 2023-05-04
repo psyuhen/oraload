@@ -12,9 +12,14 @@ import org.apache.commons.logging.LogFactory;
 
 
 /**
- * 
- * @author ps
- *
+ * @Class : ProcessReader
+ * @Package : com.huateng.oraload.cmd
+ * @Description : TODO
+ * @Author : sam.pan
+ * @Create : 2017/9/22 17:01
+ * @version V1.0
+ * @ModificationHistory Who      When        What
+ * =============     ==============  ==============================
  */
 public class ProcessReader implements Runnable {
 	private static final Log LOGGER = LogFactory.getLog(ProcessReader.class);

@@ -1,47 +1,33 @@
 package com.huateng.oraload.db;
 
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import com.huateng.oraload.dao.AbstractDAO;
+import com.huateng.oraload.util.StreamUtil;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
+
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
-
-import com.huateng.oraload.model.DBParams;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
-
-import com.huateng.oraload.dao.AbstractDAO;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * 采用HikariCP类库来管理
  * 数据库管理类
  * @author ps
  */
+@Slf4j
 public class HikariCPManager {
-	private final static Logger LOGGER = Logger.getLogger(HikariCPManager.class);
 	private static HikariDataSource ds;
-//	private static final String PROPERTIES = "hikaricp.properties";
 
-	/*static {
-		Properties pro = new Properties();
-		try {
-			pro.load(HikariCPManager.class.getClassLoader().getResourceAsStream(PROPERTIES));
-			HikariConfig config = new HikariConfig(pro);
-			ds = new HikariDataSource(config);
-		} catch (IOException e) {
-			LOGGER.error(PROPERTIES+" is load error",e);
-		}
-	}*/
-
+	/**
+	 * 重置数据库连接池
+	 * @param dbInfo
+	 */
 	public static void resetConnection(DBInfo dbInfo){
 		if(ds != null){
+			ds.close();
 			ds = null;
 		}
 
@@ -55,7 +41,7 @@ public class HikariCPManager {
 
 			ds = bds;
 		}catch (Exception e){
-			LOGGER.error(e.getMessage(),e);
+			log.error("初始化数据库连接异常,出错原因：{}", e.getMessage());
 			System.exit(1);
 		}
 	}
@@ -71,7 +57,7 @@ public class HikariCPManager {
 		try {
 			conn = ds.getConnection();
 		} catch (SQLException e) {
-			LOGGER.error("获取连接异常", e);
+			log.error("获取数据库连接异常,出错原因：{}", e.getMessage());
 			throw new IllegalStateException(e);
 		}
 		return conn;
@@ -90,10 +76,10 @@ public class HikariCPManager {
 	public static <E> List<E> executeQuery(String sql, AbstractDAO<E> dao) {
 		Statement stmt = null;
 		ResultSet rs = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			stmt = connection.createStatement();
+			conn = getConnection();
+			stmt = conn.createStatement();
 			rs = stmt.executeQuery(sql);
 			List<E> result = new LinkedList<E>();
 			while (rs.next()) {
@@ -101,27 +87,12 @@ public class HikariCPManager {
 			}
 			return result;
 		} catch (SQLException e) {
-			LOGGER.error("查询异常，查询语句[" + sql + "]", e);
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
 			return null;
 		} finally {
-			try {
-				if (rs != null)
-					rs.close();
-			} catch (Exception e) {
-				LOGGER.error("rs关闭异常", e);
-			}
-			try {
-				if (stmt != null)
-					stmt.close();
-			} catch (Exception e) {
-				LOGGER.error("statement关闭异常", e);
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(rs);
+			StreamUtil.close(stmt);
+			StreamUtil.close(conn);
 		}
 	}
 
@@ -141,10 +112,10 @@ public class HikariCPManager {
 										   AbstractDAO<E> dao) {
 		PreparedStatement ps = null;
 		ResultSet rs = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			ps = connection.prepareStatement(sql);
+			conn = getConnection();
+			ps = conn.prepareStatement(sql);
 
 			if (params != null) {
 				for (int i = 0; i < params.length; i++) {
@@ -159,27 +130,12 @@ public class HikariCPManager {
 			}
 			return result;
 		} catch (SQLException e) {
-			LOGGER.error("查询异常，查询语句[" + sql + "]", e);
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
 			return null;
 		} finally {
-			try {
-				if (rs != null)
-					rs.close();
-			} catch (Exception e) {
-				LOGGER.error("ResultSet关闭异常", e);
-			}
-			try {
-				if (ps != null)
-					ps.close();
-			} catch (Exception e) {
-				LOGGER.error("PreparedStatement关闭异常", e);
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(rs);
+			StreamUtil.close(ps);
+			StreamUtil.close(conn);
 		}
 	}
 
@@ -196,10 +152,10 @@ public class HikariCPManager {
 	public static <E> E singleQuery(String sql, Object[] params, AbstractDAO<E> dao) {
 		PreparedStatement  ps = null;
 		ResultSet rs = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			ps = connection.prepareStatement(sql);
+			conn = getConnection();
+			ps = conn.prepareStatement(sql);
 			if (params != null) {
 				for (int i = 0; i < params.length; i++) {
 					ps.setObject(i + 1, params[i]);
@@ -213,27 +169,12 @@ public class HikariCPManager {
 				return null;
 			}
 		} catch (SQLException e) {
-			LOGGER.error("查询异常，查询语句[" + sql + "]", e);
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
 			return null;
 		} finally {
-			try {
-				if (rs != null)
-					rs.close();
-			} catch (Exception e) {
-				LOGGER.error("ResultSet关闭异常", e);
-			}
-			try {
-				if (ps != null)
-					ps.close();
-			} catch (Exception e) {
-				LOGGER.error("PreparedStatement关闭异常", e);
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(rs);
+			StreamUtil.close(ps);
+			StreamUtil.close(conn);
 		}
 	}
 	/**
@@ -249,10 +190,10 @@ public class HikariCPManager {
 	public static <E> E singleQuery(String sql, AbstractDAO<E> dao) {
 		Statement stmt = null;
 		ResultSet rs = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			stmt = connection.createStatement();
+			conn = getConnection();
+			stmt = conn.createStatement();
 			rs = stmt.executeQuery(sql);
 			if (rs.next()) {
 				return dao.mapping(rs);
@@ -260,27 +201,12 @@ public class HikariCPManager {
 				return null;
 			}
 		} catch (SQLException e) {
-			LOGGER.error("查询异常，查询语句[" + sql + "]", e);
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
 			return null;
 		} finally {
-			try {
-				if (rs != null)
-					rs.close();
-			} catch (Exception e) {
-				LOGGER.error("rs关闭异常", e);
-			}
-			try {
-				if (stmt != null)
-					stmt.close();
-			} catch (Exception e) {
-				LOGGER.error("statement关闭异常", e);
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(rs);
+			StreamUtil.close(stmt);
+			StreamUtil.close(conn);
 		}
 	}
 
@@ -297,34 +223,19 @@ public class HikariCPManager {
 	public static <E> E singleQuery2(String sql, AbstractDAO<E> dao) {
 		Statement stmt = null;
 		ResultSet rs = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			stmt = connection.createStatement();
+			conn = getConnection();
+			stmt = conn.createStatement();
 			rs = stmt.executeQuery(sql);
 			return dao.mapping(rs);
 		} catch (SQLException e) {
-			LOGGER.error("查询异常，查询语句[" + sql + "]", e);
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
 			return null;
 		} finally {
-			try {
-				if (rs != null)
-					rs.close();
-			} catch (Exception e) {
-				LOGGER.error("rs关闭异常", e);
-			}
-			try {
-				if (stmt != null)
-					stmt.close();
-			} catch (Exception e) {
-				LOGGER.error("statement关闭异常", e);
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(rs);
+			StreamUtil.close(stmt);
+			StreamUtil.close(conn);
 		}
 	}
 
@@ -346,10 +257,10 @@ public class HikariCPManager {
 										   int maxRow, AbstractDAO<E> dao) {
 		Statement stmt = null;
 		ResultSet rs = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			stmt = connection.createStatement();
+			conn = getConnection();
+			stmt = conn.createStatement();
 			rs = stmt.executeQuery(sql);
 			int CurrentRow = 0;
 			List<E> result = new ArrayList<E>();
@@ -366,27 +277,12 @@ public class HikariCPManager {
 			}
 			return result;
 		} catch (SQLException e) {
-			LOGGER.error("查询异常，查询语句[" + sql + "]", e);
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
 			return null;
 		} finally {
-			try {
-				if (rs != null)
-					rs.close();
-			} catch (Exception e) {
-				LOGGER.error("rs关闭异常", e);
-			}
-			try {
-				if (stmt != null)
-					stmt.close();
-			} catch (Exception e) {
-				LOGGER.error("statement关闭异常", e);
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(rs);
+			StreamUtil.close(stmt);
+			StreamUtil.close(conn);
 		}
 	}
 
@@ -399,28 +295,17 @@ public class HikariCPManager {
 	 */
 	public static boolean execute(String sql) {
 		Statement stmt = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			stmt = connection.createStatement();
+			conn = getConnection();
+			stmt = conn.createStatement();
 			return stmt.execute(sql);
 		} catch (SQLException e) {
-			LOGGER.error("SQL异常,SQL语句[" + sql + "]", e);
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
 			return false;
 		} finally {
-			if (stmt != null) {
-				try {
-					stmt.close();
-				} catch (SQLException e) {
-					LOGGER.error("statement关闭异常", e);
-				}
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(stmt);
+			StreamUtil.close(conn);
 		}
 	}
 
@@ -433,28 +318,17 @@ public class HikariCPManager {
 	 */
 	public static int executeUpdate(String sql) {
 		Statement stmt = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			stmt = connection.createStatement();
+			conn = getConnection();
+			stmt = conn.createStatement();
 			return stmt.executeUpdate(sql);
 		} catch (SQLException e) {
-			LOGGER.error("SQL异常,SQL语句[" + sql + "]", e);
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
 			return 0;
 		} finally {
-			if (stmt != null) {
-				try {
-					stmt.close();
-				} catch (SQLException e) {
-					LOGGER.error("statement关闭异常", e);
-				}
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(stmt);
+			StreamUtil.close(conn);
 		}
 	}
 
@@ -469,10 +343,10 @@ public class HikariCPManager {
 	 */
 	public static int executeUpdate(String sql, Object[] params) {
 		PreparedStatement ps = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			ps = connection.prepareStatement(sql);
+			conn = getConnection();
+			ps = conn.prepareStatement(sql);
 
 			if (params != null) {
 				for (int i = 0; i < params.length; i++) {
@@ -480,35 +354,28 @@ public class HikariCPManager {
 				}
 			}
 
-			connection.setAutoCommit(false);// 设置不自动提交
+			conn.setAutoCommit(false);// 设置不自动提交
 			int count = ps.executeUpdate();
-			connection.commit();
+			conn.commit();
 
 			return count;
 		} catch (SQLException e) {
 			try {
-				if (connection != null) {
-					connection.rollback();
+				if (conn != null) {
+					conn.rollback();
 				}
 			} catch (SQLException e1) {
-				LOGGER.error("回滚出错", e1);
+				log.error("回滚出错", e1);
 			}
-			LOGGER.error("SQL异常,SQL语句[" + sql + "]", e);
+
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
+			if (params != null) {
+				log.error("data:{},{},{}",params[0],params[1],params[2] );
+			}
 			return 0;
 		} finally {
-			if (ps != null) {
-				try {
-					ps.close();
-				} catch (SQLException e) {
-					LOGGER.error("PreparedStatement关闭异常", e);
-				}
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(ps);
+			StreamUtil.close(conn);
 		}
 	}
 
@@ -524,10 +391,10 @@ public class HikariCPManager {
 	 */
 	public static int[] batchExecuteUpdate(String sql, LinkedList<Object[]> paramList) {
 		PreparedStatement ps = null;
-		Connection connection = null;
+		Connection conn = null;
 		try {
-			connection = getConnection();
-			ps = connection.prepareStatement(sql);
+			conn = getConnection();
+			ps = conn.prepareStatement(sql);
 
 			if (paramList != null) {
 				Object[] item = null;
@@ -539,35 +406,24 @@ public class HikariCPManager {
 				}
 			}
 
-			connection.setAutoCommit(false);// 设置不自动提交
+			conn.setAutoCommit(false);// 设置不自动提交
 			int[] count = ps.executeBatch();
-			connection.commit();
+			conn.commit();
 
 			return count;
 		} catch (SQLException e) {
 			try {
-				if (connection != null) {
-					connection.rollback();
+				if (conn != null) {
+					conn.rollback();
 				}
 			} catch (SQLException e1) {
-				LOGGER.error("回滚出错", e1);
+				log.error("回滚出错", e1);
 			}
-			LOGGER.error("SQL异常,SQL语句[" + sql + "]", e);
+			log.error("SQL异常,SQL语句{},出错原因：{}", sql, e.getMessage());
 			return null;
 		} finally {
-			if (ps != null) {
-				try {
-					ps.close();
-				} catch (SQLException e) {
-					LOGGER.error("PreparedStatement关闭异常", e);
-				}
-			}
-			try {
-				if (connection != null)
-					connection.close();
-			} catch (Exception e) {
-				LOGGER.error("connection关闭异常", e);
-			}
+			StreamUtil.close(ps);
+			StreamUtil.close(conn);
 		}
 	}
 }

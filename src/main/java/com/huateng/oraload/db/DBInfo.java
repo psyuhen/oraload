@@ -1,7 +1,5 @@
 package com.huateng.oraload.db;
 
-import com.huateng.oraload.model.DBParams;
-
 /**
  * Created by sam.pan on 2017/3/24.
  */

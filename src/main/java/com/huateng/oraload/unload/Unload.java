@@ -2,6 +2,8 @@ package com.huateng.oraload.unload;
 
 import com.huateng.oraload.db.HikariCPManager;
 import com.huateng.oraload.model.Params;
+import com.huateng.oraload.util.StreamUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -13,13 +15,8 @@ import java.util.LinkedList;
 /**
  * Created by sam.pan on 2017/3/6.
  */
+@Slf4j
 public class Unload {
-    private static final Log LOGGER = LogFactory.getLog(Unload.class);
-
-    /*private @Getter @Setter String sql;
-    private @Getter @Setter File file;
-    private @Getter @Setter String destFile;
-    private @Getter @Setter String sqrt;*/
     private Params params;
 
     public Unload(Params params){
@@ -32,11 +29,11 @@ public class Unload {
         }
 
         this.params.setSqrt(StringUtils.isBlank(this.params.getSqrt())?"|" : this.params.getSqrt());
-        LOGGER.info("unload data starting ===>");
+        log.info("unload data starting ===>");
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
-        int MAX_FETCH_SIZE = 1000;
+        final int MAX_FETCH_SIZE = 1000;
         long totalNum = 0;
         long startTime = System.currentTimeMillis();
         try {
@@ -53,7 +50,7 @@ public class Unload {
                 if(rowNum % MAX_FETCH_SIZE == 0){
                     writeFile(rowList);
                     totalNum += MAX_FETCH_SIZE;
-                    LOGGER.info("writed " +totalNum+ " row to file ===>");
+                    log.info("writed {}  ===> file", totalNum);
                 }
             }
 
@@ -61,37 +58,19 @@ public class Unload {
                 int lastCount = rowList.size();
                 writeFile(rowList);
                 totalNum += lastCount;
-                LOGGER.info("writed " +totalNum+ " row to file ===>");
+                log.info("writed {}  ===> file", totalNum);
             }
 
 
-            LOGGER.info("total write " +totalNum+ " row to file ===>");
-            LOGGER.info("total time :" + (System.currentTimeMillis() - startTime) + "ms");
+            log.info("writed {}  ===> file", totalNum);
+            log.info("total time :{}ms", (System.currentTimeMillis() - startTime));
         } catch (SQLException e) {
-            LOGGER.error("连接数据库出错！");
+            log.error("连接数据库出错！");
             throw new RuntimeException("连接数据库出错！",e);
         } finally{
-            try {
-                if(rs != null){
-                    rs.close();
-                }
-            } catch (SQLException e) {
-                LOGGER.error("关闭查询结果集出错！");
-            }
-            try {
-                if(ps != null){
-                    ps.close();
-                }
-            } catch (SQLException e) {
-                LOGGER.error("关闭prepareStatement出错！");
-            }
-            try {
-                if(conn != null){
-                    conn.close();
-                }
-            } catch (SQLException e) {
-                LOGGER.error("关闭数据库连接出错！");
-            }
+            StreamUtil.close(rs);
+            StreamUtil.close(ps);
+            StreamUtil.close(conn);
         }
     }
 
@@ -110,19 +89,23 @@ public class Unload {
             }
             curRow = sb.toString();
         } catch (SQLException e) {
-            LOGGER.error("获取表的列信息出错");
+            log.error("获取表的列信息出错:{}", e.getMessage());
         }
 
         return curRow;
     }
 
+    /**
+     * 把数据写到文件中
+     * @param list
+     */
     private void writeFile(LinkedList<String> list){
         BufferedWriter bw = null;
         OutputStreamWriter osw = null;
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(this.params.getFile(), true);
-            osw = new OutputStreamWriter(fos, "UTF-8");
+            osw = new OutputStreamWriter(fos, params.getCharset());
             bw = new BufferedWriter(osw);
 
             String item = null;
@@ -132,31 +115,13 @@ public class Unload {
             }
             bw.flush();
         } catch (FileNotFoundException e) {
-            LOGGER.error(e.getMessage(),e);
+            log.error("{}文件找不到", this.params.getFile().getName());
         } catch (IOException e) {
-            LOGGER.error(e.getMessage(),e);
+            log.error("写入文件失败:{}", e.getMessage());
         }finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                LOGGER.error(e.getMessage(), e);
-            }
-            try {
-                if (osw != null) {
-                    osw.close();
-                }
-            } catch (IOException e) {
-                LOGGER.error(e.getMessage(), e);
-            }
-            try {
-                if (bw != null) {
-                    bw.close();
-                }
-            } catch (IOException e) {
-                LOGGER.error(e.getMessage(), e);
-            }
+            StreamUtil.close(fos);
+            StreamUtil.close(osw);
+            StreamUtil.close(bw);
         }
     }
 }
