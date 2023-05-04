@@ -4,7 +4,7 @@
 
   <groupId>com.huateng</groupId>
   <artifactId>oraload</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0</version>
   <packaging>jar</packaging>
 
   <name>oraload</name>
@@ -33,7 +33,7 @@
     <slf4j-log4j12.version>1.7.12</slf4j-log4j12.version>
     <commons-logging.version>1.2</commons-logging.version>
     <ojdbc6.version>11.2.0.4</ojdbc6.version>
-    <HikariCP-java6.version>2.3.12</HikariCP-java6.version>
+    <HikariCP.version>2.7.9</HikariCP.version>
     <commons-lang3.version>3.4</commons-lang3.version>
     <commons-configuration.version>1.10</commons-configuration.version>
     <lombok.version>1.16.4</lombok.version>
@@ -83,8 +83,8 @@
     <!-- JDBC -->
     <dependency>
       <groupId>com.zaxxer</groupId>
-      <artifactId>HikariCP-java6</artifactId>
-      <version>${HikariCP-java6.version}</version>
+      <artifactId>HikariCP</artifactId>
+      <version>${HikariCP.version}</version>
     </dependency>
 
     <!--lang包-->
@@ -112,6 +112,56 @@
       <artifactId>commons-cli</artifactId>
       <version>${commons-cli.version}</version>
     </dependency>
+
+    <!-- Informix -->
+    <dependency>
+	    <groupId>com.ibm.informix</groupId>
+	    <artifactId>jdbc</artifactId>
+	    <version>4.10.8.1</version>
+	</dependency>
+
+    <!-- Sqlite -->
+    <dependency>
+      <groupId>org.xerial</groupId>
+      <artifactId>sqlite-jdbc</artifactId>
+      <version>3.20.0</version>
+    </dependency>
+
+    <!-- derby -->
+    <dependency>
+      <groupId>org.apache.derby</groupId>
+      <artifactId>derby</artifactId>
+      <version>10.13.1.1</version>
+    </dependency>
+
+    <!-- hsqldb -->
+    <dependency>
+      <groupId>org.hsqldb</groupId>
+      <artifactId>hsqldb</artifactId>
+      <version>2.4.0</version>
+    </dependency>
+
+    <!-- H2 -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>1.4.196</version>
+    </dependency>
+
+    <!-- postgresql -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.1.4.jre7</version>
+    </dependency>
+
+    <!-- sqlserver -->
+    <dependency>
+      <groupId>com.microsoft.sqlserver</groupId>
+      <artifactId>mssql-jdbc</artifactId>
+      <version>6.2.1.jre8</version>
+    </dependency>
+
   </dependencies>
   <build>
     <plugins>
@@ -126,6 +176,61 @@
             <configuration>
               <outputDirectory>${project.build.directory}/lib</outputDirectory>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <compilerArguments>
+            <verbose />
+            <bootclasspath>${java.home}/lib/rt.jar;${java.home}/lib/jce.jar</bootclasspath>
+          </compilerArguments>
+        </configuration>
+      </plugin>
+      <!--配置生成源码包-->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.0.1</version>
+        <configuration>
+          <attach>true</attach>
+        </configuration>
+        <executions>
+          <execution>
+            <!-- 打包时生成 -->
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!--配置生成Javadoc包-->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.4</version>
+        <configuration>
+          <encoding>UTF-8</encoding>
+          <aggregate>true</aggregate>
+          <charset>UTF-8</charset>
+          <docencoding>UTF-8</docencoding>
+          <!-- 屏蔽生成javadoc的一堆错误 -->
+          <additionalparam>-Xdoclint:none</additionalparam>
+        </configuration>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <!-- 打包时生成 -->
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
