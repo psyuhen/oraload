@@ -23,7 +23,7 @@ public class HikariCPManager {
 
 	/**
 	 * 重置数据库连接池
-	 * @param dbInfo
+	 * @param dbInfo 数据库详细信息
 	 */
 	public static void resetConnection(DBInfo dbInfo){
 		if(ds != null){
@@ -37,11 +37,12 @@ public class HikariCPManager {
 			properties.setProperty("dataSource.url", dbInfo.getUrl());
 			properties.setProperty("dataSource.user", dbInfo.getUser());
 			properties.setProperty("dataSource.password", dbInfo.getPwd());
-			HikariDataSource bds = new HikariDataSource(new HikariConfig(properties));
+			HikariConfig hikariConfig = new HikariConfig(properties);
 
-			ds = bds;
+			ds = new HikariDataSource(hikariConfig);
 		}catch (Exception e){
 			log.error("初始化数据库连接异常,出错原因：{}", e.getMessage());
+			log.error("", e);
 			System.exit(1);
 		}
 	}
@@ -53,7 +54,7 @@ public class HikariCPManager {
 	 * @return connection
 	 */
 	public static Connection getConnection() {
-		Connection conn = null;
+		Connection conn;
 		try {
 			conn = ds.getConnection();
 		} catch (SQLException e) {
@@ -66,7 +67,7 @@ public class HikariCPManager {
 	/**
 	 * 查询SQL，并返回一个list数据集
 	 *
-	 * @param <E>
+	 * @param <E> 泛型变量
 	 * @param sql
 	 *            查询SQL
 	 * @param dao
@@ -81,7 +82,7 @@ public class HikariCPManager {
 			conn = getConnection();
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery(sql);
-			List<E> result = new LinkedList<E>();
+			List<E> result = new LinkedList<>();
 			while (rs.next()) {
 				result.add(dao.mapping(rs));
 			}
@@ -99,7 +100,7 @@ public class HikariCPManager {
 	/**
 	 * 查询SQL，并返回一个list数据集
 	 *
-	 * @param <E>
+	 * @param <E> 泛型变量
 	 * @param sql
 	 *            查询SQL
 	 * @param params
@@ -124,7 +125,7 @@ public class HikariCPManager {
 			}
 
 			rs = ps.executeQuery();
-			List<E> result = new ArrayList<E>();
+			List<E> result = new ArrayList<>();
 			while (rs.next()) {
 				result.add(dao.mapping(rs));
 			}
@@ -142,7 +143,7 @@ public class HikariCPManager {
 	/**
 	 * 查询SQL，并返回一条数据
 	 *
-	 * @param <E>
+	 * @param <E> 泛型变量
 	 * @param sql
 	 *            查询SQL
 	 * @param dao
@@ -180,7 +181,7 @@ public class HikariCPManager {
 	/**
 	 * 查询SQL，并返回一条数据
 	 *
-	 * @param <E>
+	 * @param <E> 泛型变量
 	 * @param sql
 	 *            查询SQL
 	 * @param dao
@@ -213,7 +214,7 @@ public class HikariCPManager {
 	/**
 	 * 查询SQL，并返回一条数据
 	 *
-	 * @param <E>
+	 * @param  <E>泛型变量
 	 * @param sql
 	 *            查询SQL
 	 * @param dao
@@ -242,7 +243,7 @@ public class HikariCPManager {
 	/**
 	 * 查询SQL，从firstRow到MaxRow的数据
 	 *
-	 * @param <E>
+	 * @param <E>泛型变量
 	 * @param sql
 	 *            查询SQL
 	 * @param firstRow
@@ -262,13 +263,15 @@ public class HikariCPManager {
 			conn = getConnection();
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery(sql);
-			int CurrentRow = 0;
-			List<E> result = new ArrayList<E>();
+			int currentRow = 0;
+			List<E> result = new ArrayList<>();
 			while (rs.next()) {
-				CurrentRow++;
-				if (CurrentRow < firstRow) {
+				currentRow++;
+				if (currentRow < firstRow) {
 					continue;
-				} else if (CurrentRow >= maxRow) {
+				}
+
+				if (currentRow >= maxRow) {
 					break;
 				} else {
 					E obj = dao.mapping(rs);
@@ -289,7 +292,7 @@ public class HikariCPManager {
 	/**
 	 * 执行一个SQL,如：insert,update,delete,select等
 	 *
-	 * @param sql
+	 * @param sql SQL语句
 	 * @return true if the first result is a ResultSet object; false if it is an
 	 *         update count or there are no results
 	 */
@@ -312,7 +315,7 @@ public class HikariCPManager {
 	/**
 	 * 执行一个DML的SQL，如insert,update,delete等
 	 *
-	 * @param sql
+	 * @param sql SQL语句
 	 * @return either (1) the row count for SQL Data Manipulation Language (DML)
 	 *         statements or (2) 0 for SQL statements that return nothing
 	 */
@@ -335,7 +338,7 @@ public class HikariCPManager {
 	/**
 	 * 执行一个DML的SQL，如insert,update,delete等
 	 *
-	 * @param sql
+	 * @param sql SQL语句
 	 * @param params
 	 *            参数
 	 * @return either (1) the row count for SQL Data Manipulation Language (DML)
@@ -361,9 +364,7 @@ public class HikariCPManager {
 			return count;
 		} catch (SQLException e) {
 			try {
-				if (conn != null) {
-					conn.rollback();
-				}
+				conn.rollback();
 			} catch (SQLException e1) {
 				log.error("回滚出错", e1);
 			}
@@ -382,7 +383,7 @@ public class HikariCPManager {
 	/**
 	 * 执行一个DML的SQL，如insert,update,delete等
 	 *
-	 * @param sql
+	 * @param sql SQL语句
 	 * @param paramList
 	 *            参数
 	 * @return an array of update counts containing one element for each command
@@ -397,7 +398,7 @@ public class HikariCPManager {
 			ps = conn.prepareStatement(sql);
 
 			if (paramList != null) {
-				Object[] item = null;
+				Object[] item;
 				while((item = paramList.poll()) != null){
 					for (int j = 0; j < item.length; j++) {
 						ps.setObject(j + 1, item[j]);
@@ -413,9 +414,7 @@ public class HikariCPManager {
 			return count;
 		} catch (SQLException e) {
 			try {
-				if (conn != null) {
-					conn.rollback();
-				}
+				conn.rollback();
 			} catch (SQLException e1) {
 				log.error("回滚出错", e1);
 			}

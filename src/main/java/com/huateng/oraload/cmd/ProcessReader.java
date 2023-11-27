@@ -3,12 +3,11 @@
  */
 package com.huateng.oraload.cmd;
 
+import com.huateng.oraload.util.StreamUtil;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
-
-import com.huateng.oraload.util.StreamUtil;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 
 /**
@@ -21,11 +20,11 @@ import org.apache.commons.logging.LogFactory;
  * @ModificationHistory Who      When        What
  * =============     ==============  ==============================
  */
+@Slf4j
 public class ProcessReader implements Runnable {
-	private static final Log LOGGER = LogFactory.getLog(ProcessReader.class);
-	private CountDownLatch gate;
+	private final CountDownLatch gate;
 	
-	private InputStream inputStream;
+	private final InputStream inputStream;
 	
 	public ProcessReader(InputStream inputStream, CountDownLatch gate) {
 		this.inputStream = inputStream;
@@ -38,7 +37,7 @@ public class ProcessReader implements Runnable {
 	@Override
 	public void run() {
 		String out = StreamUtil.readProcessData(inputStream);
-		LOGGER.info(out);
+		log.info(out);
 		if(this.gate != null){
 			this.gate.countDown();
 		}

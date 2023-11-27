@@ -14,10 +14,10 @@ public class SystemUtil {
 		String os = System.getProperty("os.name");
 		os = os.toLowerCase();
 		
-		if(os.indexOf("windows") != -1){
+		if(os.contains("windows")){
 			return new String[]{"cmd.exe", "/C", cmd};
-		}else if(os.indexOf("linux") != -1 || os.indexOf("unix") != -1
-				|| os.indexOf("ux") != -1){
+		}else if(os.contains("linux") || os.contains("unix")
+				|| os.contains("ux")){
 			return new String[]{"/bin/sh", "-c", cmd};
 		}
 		

@@ -12,6 +12,7 @@ public class Mysql extends AbstractDataBase{
 
     @Override
     public String getDSCls() {
-        return "com.mysql.jdbc.jdbc2.optional.MysqlDataSource";
+        /*return "com.mysql.jdbc.jdbc2.optional.MysqlDataSource";*/
+        return "com.mysql.cj.jdbc.MysqlDataSource";
     }
 }

@@ -3,19 +3,20 @@
  */
 package com.huateng.oraload.util;
 
-import java.io.*;
+import lombok.extern.slf4j.Slf4j;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.BufferedReader;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 /**
  * @author ps
  *
  */
+@Slf4j
 public class StreamUtil {
-	private static final Log LOGGER = LogFactory.getLog(StreamUtil.class);
-
-
 	public static String readProcessData(InputStream inputStream){
 		InputStreamReader isr = null;
 		BufferedReader br = null;
@@ -25,11 +26,11 @@ public class StreamUtil {
 			br = new BufferedReader(isr);
 			StringBuilder sb = new StringBuilder(1000);
 			while((out = br.readLine()) != null){
-				sb.append(out + "\r\n");
+				sb.append(out).append("\r\n");
 			}
 			out = sb.toString();
 		}catch (IOException e){
-			LOGGER.error("读取输入流数据异常",e);
+			log.error("读取输入流数据异常",e);
 		}finally{
 			close(isr);
 			close(br);
@@ -48,7 +49,7 @@ public class StreamUtil {
 				closeable.close();
 			}
 		} catch (IOException e) {
-			LOGGER.error("关闭流异常:"+e.getMessage(), e);
+			log.error("关闭流异常:"+e.getMessage(), e);
 		}
 
 	}
@@ -62,7 +63,7 @@ public class StreamUtil {
 				closeable.close();
 			}
 		} catch (Exception e) {
-			LOGGER.error("关闭异常:", e);
+			log.error("关闭异常:", e);
 		}
 
 	}

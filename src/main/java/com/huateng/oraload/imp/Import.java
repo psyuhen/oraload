@@ -4,11 +4,9 @@ import com.huateng.oraload.dao.AbstractDAO;
 import com.huateng.oraload.db.HikariCPManager;
 import com.huateng.oraload.model.Params;
 import com.huateng.oraload.pool.ThreadPool;
-import com.huateng.oraload.unload.Unload;
 import com.huateng.oraload.util.StreamUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import java.io.*;
 import java.sql.ResultSet;
@@ -18,27 +16,24 @@ import java.sql.Types;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Created by sam.pan on 2017/3/6.
  */
-public class ImportData {
-    private static final Log LOGGER = LogFactory.getLog(Unload.class);
-
+@Slf4j
+public class Import {
     private final Map<String, Integer> dateTypeMap = new HashMap<>();
 
     private final Params params;
 
-    public ImportData(Params params) {
+    public Import(Params params) {
         this.params = params;
     }
 
     public void imp() {
 
         if (StringUtils.isBlank(this.params.getTable_name())) {
-            LOGGER.error("导入的数据表未设置，退出 ==> ");
+            log.error("导入的数据表未设置，退出 ==> ");
             System.exit(0);
         }
 
@@ -75,8 +70,34 @@ public class ImportData {
         StringBuilder sb2 = new StringBuilder(500);
         for (int i = 0, len = this.params.getFields().length; i < len; i++) {
             sb.append(this.params.getFields()[i]);
-            if (dateTypeMap.containsKey(i + "")) {
-                int columnType = dateTypeMap.get(i + "");
+            dateTypeHandler(i, sb2);
+            if (i < len - 1) {
+                sb.append(",");
+                sb2.append(",");
+            }
+        }
+        sb.append(") values (");
+        sb.append(sb2);
+        sb.append(") ");
+        this.params.setInsertSql(sb.toString());
+        log.info("insert sql => " + this.params.getInsertSql());
+
+        if (this.params.getFile() == null) {
+            this.params.setFile(new File(this.params.getDest_file()));
+        }
+
+        if (!this.params.getFile().exists()) {
+            log.error("data file not exist ==> " + this.params.getDest_file());
+        }
+
+        readData();
+    }
+
+    private void dateTypeHandler(int index, StringBuilder sb2) {
+        if (dateTypeMap.containsKey(index + "")) {
+            int columnType = dateTypeMap.get(index + "");
+            String database = params.getDatabase();
+            if ("oracle".equalsIgnoreCase(database)) {
                 if (Types.DATE == columnType) {
                     sb2.append("to_date(?, 'yyyymmdd')");
                 } else if (Types.TIME == columnType) {
@@ -84,29 +105,18 @@ public class ImportData {
                 } else if (Types.TIMESTAMP == columnType) {
                     sb2.append("to_timestamp(?, 'yyyymmddhh24missff3')");
                 }
-            } else {
-                sb2.append("?");
+            } else if ("mysql".equalsIgnoreCase(database)) {
+                if (Types.DATE == columnType) {
+                    sb2.append("str_to_date(?, '%Y%m%d')");
+                } else if (Types.TIME == columnType) {
+                    sb2.append("str_to_date(?, '%H%i%s')");
+                } else if (Types.TIMESTAMP == columnType) {
+                    sb2.append("str_to_timestamp(?, '%Y%m%d%H%i%s')");
+                }
             }
-            if (i < len - 1) {
-                sb.append(",");
-                sb2.append(",");
-            }
+        } else {
+            sb2.append("?");
         }
-        sb.append(") values (");
-        sb.append(sb2.toString());
-        sb.append(") ");
-        this.params.setInsertSql(sb.toString());
-        LOGGER.info("insert sql => " + this.params.getInsertSql());
-
-        if (this.params.getFile() == null) {
-            this.params.setFile(new File(this.params.getDest_file()));
-        }
-
-        if (!this.params.getFile().exists()) {
-            LOGGER.error("data file not exist ==> " + this.params.getDest_file());
-        }
-
-        readData();
     }
 
     private void readData() {
@@ -119,9 +129,9 @@ public class ImportData {
             isr = new InputStreamReader(fis, this.params.getCharset());
             br = new BufferedReader(isr);
 
-            String item = null;
+            String item;
             String sqrt = StringUtils.isBlank(this.params.getSqrt()) ? "|" : this.params.getSqrt();
-            LinkedList<Object[]> list = new LinkedList<Object[]>();
+            LinkedList<Object[]> list = new LinkedList<>();
             long totalNum = 0;
             while ((item = br.readLine()) != null) {
 
@@ -135,25 +145,23 @@ public class ImportData {
                     totalNum += 1000;
                     batchUpdate(list);
 
-                    LOGGER.info("inserted " + totalNum + " to db");
+                    log.info("inserted " + totalNum + " to db");
                 }
             }
 
             if (!list.isEmpty()) {
                 totalNum += list.size();
                 batchUpdate(list);
-                LOGGER.info("inserted " + totalNum + " to db");
+                log.info("inserted " + totalNum + " to db");
             }
 
-            LOGGER.info("total write " + totalNum + " row to db ===>");
-            LOGGER.info("total time :" + (System.currentTimeMillis() - startTime) + "ms");
+            log.info("total write " + totalNum + " row to db ===>");
+            log.info("total time :" + (System.currentTimeMillis() - startTime) + "ms");
 
             //文件读完，关闭
             ThreadPool.getPool().shutdown();
-        } catch (FileNotFoundException e) {
-            LOGGER.error(e.getMessage(), e);
         } catch (IOException e) {
-            LOGGER.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         } finally {
             StreamUtil.close(fis);
             StreamUtil.close(isr);
@@ -162,13 +170,11 @@ public class ImportData {
     }
 
     private void batchUpdate(LinkedList<Object[]> list) {
-        LinkedList<Object[]> backupList = new LinkedList<Object[]>();
-        backupList.addAll(list);
+        LinkedList<Object[]> backupList = new LinkedList<>(list);
         int[] update = HikariCPManager.batchExecuteUpdate(this.params.getInsertSql(), list);
         if (update == null) {
             signleUpdate(backupList);
             backupList.clear();
-            backupList = null;
         }
     }
 
@@ -178,7 +184,7 @@ public class ImportData {
             return;
         }
 
-        LOGGER.info("批量操作失败，开始单条插入");
+        log.info("批量操作失败，开始单条插入");
         int size = list.size();
         if (size < 10) {
             for (Object[] obj : list) {
@@ -190,9 +196,7 @@ public class ImportData {
         //启动5个线程的线程池
         ThreadPool threadPool = ThreadPool.getPool();
         for (Object[] obj : list) {
-            threadPool.execute(() -> {
-                HikariCPManager.executeUpdate(this.params.getInsertSql(), obj);
-            });
+            threadPool.execute(() -> HikariCPManager.executeUpdate(this.params.getInsertSql(), obj));
         }
     }
 

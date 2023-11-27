@@ -5,8 +5,7 @@ package com.huateng.oraload.cmd;
 
 import com.huateng.oraload.util.StreamUtil;
 import com.huateng.oraload.util.SystemUtil;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
@@ -15,9 +14,8 @@ import java.util.concurrent.CountDownLatch;
  * @author ps
  *
  */
+@Slf4j
 public class Command {
-	private static final Log LOGGER = LogFactory.getLog(Command.class);
-	
 	public static String[]execute(String cmd){
 		return execute(cmd, true);
 	}
@@ -42,16 +40,16 @@ public class Command {
 			
 			exit = process.waitFor();
 		}catch (Exception e){
-			LOGGER.error(e);
+			log.error(e.getMessage(), e);
 		}
 		
 		return new String []{out,err,String.valueOf(exit)};
 	}
 	/**
 	 * 执行系统命令，在子线程中读取
-	 * @param cmd
-	 * @param isParam
-	 * @return
+	 * @param cmd 命令
+	 * @param isParam 是否有参数
+	 * @return 返回执行后的结果
 	 */
 	public static String[]executeInThread(String cmd, boolean isParam){
 		String out = "";
@@ -76,7 +74,7 @@ public class Command {
 			
 			exit = process.waitFor();
 		}catch (Exception e){
-			LOGGER.error(e);
+			log.error(e.getMessage(), e);
 		}
 		
 		return new String []{out,err,String.valueOf(exit)};

@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
  * =============     ==============  ==============================
  */
 public class ThreadPool {
-    private int maxSize = 5;
+    private final int maxSize = 5;
     private @Getter ExecutorService executorService;
 
     private ThreadPool(){

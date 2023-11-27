@@ -3,14 +3,14 @@ package com.huateng.oraload.db;
 import com.huateng.oraload.model.DBParams;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.apachecommons.CommonsLog;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 /**
  * 数据库的基类
  * Created by sam.pan on 2017/9/22.
  */
-@CommonsLog
+@Slf4j
 public abstract class AbstractDataBase implements DBInfo{
     /**
      * 数据库的jdbc参数
@@ -38,7 +38,7 @@ public abstract class AbstractDataBase implements DBInfo{
     @Override
     public String getUrl() {
         String jdbcUrlPrefix = getJdbcUrlPrefix();
-        StringBuffer jdbcUrl = new StringBuffer(50);
+        StringBuilder jdbcUrl = new StringBuilder(50);
         //如果没有填写url选项，默认增加
         if(StringUtils.isBlank(dbParams.getUrl())){
             jdbcUrl.append(jdbcUrlPrefix).append(dbParams.getIp()).append(":").append(dbParams.getPort());
@@ -55,7 +55,7 @@ public abstract class AbstractDataBase implements DBInfo{
             }
             jdbcUrl.append(dbParams.getUrl());
         }
-        log.info("url==>" + jdbcUrl.toString());
+        log.info("url==>{}", jdbcUrl);
 
         return jdbcUrl.toString();
     }

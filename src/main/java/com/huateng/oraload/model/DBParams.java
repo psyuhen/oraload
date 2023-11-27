@@ -20,16 +20,11 @@ public class DBParams {
 
     private DBParams(){}
 
-    private static DBParams dbParams = null;
+    private static final class DbParamsHolder {
+        static final DBParams dbParams = new DBParams();
+    }
 
     public static DBParams getInstance(){
-        if (dbParams == null){
-            synchronized (DBParams.class){
-                if (dbParams == null){
-                    dbParams = new DBParams();
-                }
-            }
-        }
-        return dbParams;
+        return DbParamsHolder.dbParams;
     }
 }

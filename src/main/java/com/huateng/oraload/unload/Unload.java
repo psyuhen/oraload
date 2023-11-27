@@ -5,11 +5,18 @@ import com.huateng.oraload.model.Params;
 import com.huateng.oraload.util.StreamUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
-import java.io.*;
-import java.sql.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.LinkedList;
 
 /**
@@ -17,44 +24,46 @@ import java.util.LinkedList;
  */
 @Slf4j
 public class Unload {
-    private Params params;
+    private final Params params;
 
-    public Unload(Params params){
+    public Unload(Params params) {
         this.params = params;
     }
 
-    public void toUnload(){
-        if(this.params.getFile() == null || !this.params.getFile().exists()){
+    public void toUnload() {
+        if (this.params.getFile() == null || !this.params.getFile().exists()) {
             this.params.setFile(new File(this.params.getDest_file()));
         }
 
-        this.params.setSqrt(StringUtils.isBlank(this.params.getSqrt())?"|" : this.params.getSqrt());
+        this.params.setSqrt(StringUtils.isBlank(this.params.getSqrt()) ? "|" : this.params.getSqrt());
         log.info("unload data starting ===>");
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
         final int MAX_FETCH_SIZE = 1000;
         long totalNum = 0;
-        long startTime = System.currentTimeMillis();
         try {
             conn = HikariCPManager.getConnection();
-            ps = conn.prepareStatement(this.params.getSql(),ResultSet.TYPE_FORWARD_ONLY,ResultSet.CONCUR_READ_ONLY);
+            long startTime = System.currentTimeMillis();
+            ps = conn.prepareStatement(this.params.getSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             rs = ps.executeQuery();
             rs.setFetchSize(MAX_FETCH_SIZE);
-            LinkedList<String> rowList = new LinkedList<String>();
-            while(rs.next()){
-                String curRow = rs2Row(rs);
+            LinkedList<String> rowList = new LinkedList<>();
+            StringBuilder sb = new StringBuilder(1000);
+            while (rs.next()) {
+                rs2Row(sb, rs);
 
-                rowList.add(curRow);
+                rowList.add(sb.toString());
+                sb.setLength(0);
                 int rowNum = rs.getRow();
-                if(rowNum % MAX_FETCH_SIZE == 0){
+                if (rowNum % MAX_FETCH_SIZE == 0) {
                     writeFile(rowList);
                     totalNum += MAX_FETCH_SIZE;
                     log.info("writed {}  ===> file", totalNum);
                 }
             }
 
-            if(!rowList.isEmpty()){
+            if (!rowList.isEmpty()) {
                 int lastCount = rowList.size();
                 writeFile(rowList);
                 totalNum += lastCount;
@@ -66,22 +75,22 @@ public class Unload {
             log.info("total time :{}ms", (System.currentTimeMillis() - startTime));
         } catch (SQLException e) {
             log.error("连接数据库出错！");
-            throw new RuntimeException("连接数据库出错！",e);
-        } finally{
+            throw new RuntimeException("连接数据库出错！", e);
+        } finally {
             StreamUtil.close(rs);
             StreamUtil.close(ps);
             StreamUtil.close(conn);
         }
     }
 
-    private String rs2Row(ResultSet rs){
+    private String rs2Row(ResultSet rs) {
         String curRow = "";
         try {
             ResultSetMetaData metaData = rs.getMetaData();
             int colCount = metaData.getColumnCount();
             StringBuilder sb = new StringBuilder(1000);
             for (int i = 0; i < colCount; i++) {
-                String colLabel = metaData.getColumnName(i+1);
+                String colLabel = metaData.getColumnName(i + 1);
                 String colValue = rs.getString(colLabel);
                 colValue = (colValue == null) ? "" : colValue;
                 sb.append(colValue);
@@ -95,11 +104,28 @@ public class Unload {
         return curRow;
     }
 
+    private void rs2Row(StringBuilder sb, ResultSet rs) {
+        try {
+            ResultSetMetaData metaData = rs.getMetaData();
+            int colCount = metaData.getColumnCount();
+            for (int i = 0; i < colCount; i++) {
+                String colValue = rs.getString(i + 1);
+                colValue = (colValue == null) ? "" : colValue;
+                sb.append(colValue);
+                sb.append(Unload.this.params.getSqrt());
+            }
+        } catch (SQLException e) {
+            log.error("获取表的列信息出错:{}", e.getMessage());
+        }
+
+    }
+
     /**
      * 把数据写到文件中
-     * @param list
+     *
+     * @param list 数据List
      */
-    private void writeFile(LinkedList<String> list){
+    private void writeFile(LinkedList<String> list) {
         BufferedWriter bw = null;
         OutputStreamWriter osw = null;
         FileOutputStream fos = null;
@@ -108,8 +134,8 @@ public class Unload {
             osw = new OutputStreamWriter(fos, params.getCharset());
             bw = new BufferedWriter(osw);
 
-            String item = null;
-            while((item = list.poll()) != null){
+            String item;
+            while ((item = list.poll()) != null) {
                 bw.write(item);
                 bw.newLine();
             }
@@ -118,7 +144,7 @@ public class Unload {
             log.error("{}文件找不到", this.params.getFile().getName());
         } catch (IOException e) {
             log.error("写入文件失败:{}", e.getMessage());
-        }finally {
+        } finally {
             StreamUtil.close(fos);
             StreamUtil.close(osw);
             StreamUtil.close(bw);

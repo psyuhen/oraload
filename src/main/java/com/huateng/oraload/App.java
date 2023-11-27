@@ -1,8 +1,24 @@
 package com.huateng.oraload;
 
-import java.util.Iterator;
-
-import com.huateng.oraload.db.*;
+import com.huateng.oraload.db.AbstractDataBase;
+import com.huateng.oraload.db.DataBase;
+import com.huateng.oraload.db.Db2;
+import com.huateng.oraload.db.Derby;
+import com.huateng.oraload.db.H2;
+import com.huateng.oraload.db.HikariCPManager;
+import com.huateng.oraload.db.Hsqldb;
+import com.huateng.oraload.db.Informix;
+import com.huateng.oraload.db.Mysql;
+import com.huateng.oraload.db.Oracle;
+import com.huateng.oraload.db.PostgreSql;
+import com.huateng.oraload.db.Sqlite;
+import com.huateng.oraload.db.Sqlserver;
+import com.huateng.oraload.db.SyBase;
+import com.huateng.oraload.imp.Import;
+import com.huateng.oraload.model.DBParams;
+import com.huateng.oraload.model.Params;
+import com.huateng.oraload.unload.Unload;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -11,25 +27,21 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
-import com.huateng.oraload.imp.ImportData;
-import com.huateng.oraload.model.DBParams;
-import com.huateng.oraload.model.Params;
-import com.huateng.oraload.unload.Unload;
+import java.util.Iterator;
 
 /**
  * Hello world!
  */
+@Slf4j
 public class App {
-    private static final Log LOGGER = LogFactory.getLog(App.class);
-    private Options options = new Options();
-    private String[] args = null;
+    private final Options options = new Options();
+    private final String[] args;
 
     public App(String[] args) {
         this.args = args;
     }
+
     public static void main(String[] args) {
 
 //        String sql = "select * from sys_module";
@@ -48,10 +60,10 @@ public class App {
 
         App app = new App(args);
         app.commandLine();
-        
+
     }
 
-    private void commandLine(){
+    private void commandLine() {
         options.addOption("h", "help", false, "command help info");
         options.addOption("v", "version", false, "version info");
         options.addOption("p", "password", true, "DataBase password");
@@ -74,121 +86,121 @@ public class App {
             CommandLine cmd = commandLineParser.parse(options, args);
             DBParams dbParams = DBParams.getInstance();
             Params params = Params.getInstance();
-            if(cmd.hasOption("v")){
-                LOGGER.info("OraLoad version:v1.0.0.1");
-            }else if(cmd.hasOption("h")){
+            if (cmd.hasOption("v")) {
+                log.info("OraLoad version:v1.0.0.1");
+            } else if (cmd.hasOption("h")) {
                 help();
-            }else{
+            } else {
                 final Iterator iterator = cmd.iterator();
-                while(iterator.hasNext()){
-                    final Option next = (Option)iterator.next();
+                while (iterator.hasNext()) {
+                    final Option next = (Option) iterator.next();
                     final String opt = next.getOpt();
                     final String nextValue = next.getValue();
-                    if(StringUtils.equals("u", opt)){
+                    if (StringUtils.equals("u", opt)) {
                         dbParams.setUsername(nextValue);
-                        LOGGER.info("get username:" + nextValue);
-                    }else if(StringUtils.equals("p", opt)){
+                        log.info("get username:" + nextValue);
+                    } else if (StringUtils.equals("p", opt)) {
                         dbParams.setPassword(nextValue);
-                        LOGGER.info("get password:" + nextValue);
-                    }else if(StringUtils.equals("ip", opt)){
+                        log.info("get password:" + nextValue);
+                    } else if (StringUtils.equals("ip", opt)) {
                         dbParams.setIp(nextValue);
-                        LOGGER.info("get Ip:" + nextValue);
-                    }else if(StringUtils.equals("port", opt)){
+                        log.info("get Ip:" + nextValue);
+                    } else if (StringUtils.equals("port", opt)) {
                         dbParams.setPort(nextValue);
-                        LOGGER.info("get port:" + nextValue);
-                    }else if(StringUtils.equals("s", opt)){
+                        log.info("get port:" + nextValue);
+                    } else if (StringUtils.equals("s", opt)) {
                         dbParams.setService(nextValue);
-                        LOGGER.info("get service:" + nextValue);
-                    }else if(StringUtils.equals("url", opt)){
+                        log.info("get service:" + nextValue);
+                    } else if (StringUtils.equals("url", opt)) {
                         dbParams.setUrl(nextValue);
-                        LOGGER.info("get url:" + nextValue);
-                    }else if(StringUtils.equals("f", opt)){
+                        log.info("get url:" + nextValue);
+                    } else if (StringUtils.equals("f", opt)) {
                         params.setDest_file(nextValue);
-                        LOGGER.info("get dest file:" + nextValue);
-                    }else if(StringUtils.equals("sql", opt)){
+                        log.info("get dest file:" + nextValue);
+                    } else if (StringUtils.equals("sql", opt)) {
                         params.setSql(nextValue);
-                        LOGGER.info("get sql:" + nextValue);
-                    }else if(StringUtils.equals("t", opt)){
+                        log.info("get sql:" + nextValue);
+                    } else if (StringUtils.equals("t", opt)) {
                         params.setTable_name(nextValue);
-                        LOGGER.info("get table name:" + nextValue);
-                    }else if(StringUtils.equals("fd", opt)){
+                        log.info("get table name:" + nextValue);
+                    } else if (StringUtils.equals("fd", opt)) {
                         params.setFields(nextValue.split(",", -1));
-                        LOGGER.info("get fields:" + nextValue);
-                    }else if(StringUtils.equals("sqrt", opt)){
+                        log.info("get fields:" + nextValue);
+                    } else if (StringUtils.equals("sqrt", opt)) {
                         params.setSqrt(nextValue);
-                        LOGGER.info("get sqrt:" + nextValue);
-                    }else if(StringUtils.equals("db", opt)){
+                        log.info("get sqrt:" + nextValue);
+                    } else if (StringUtils.equals("db", opt)) {
                         params.setDatabase(nextValue);
-                        LOGGER.info("get db:" + nextValue);
+                        log.info("get db:" + nextValue);
                     }
                 }
-                LOGGER.info("DB params:" + dbParams);
-                LOGGER.info("Other params:" + params);
+                log.info("DB params:" + dbParams);
+                log.info("Other params:" + params);
 
 
-                if(!StringUtils.isBlank(dbParams.getUsername())){
-                    AbstractDataBase dbInfo= null;
+                if (!StringUtils.isBlank(dbParams.getUsername())) {
+                    AbstractDataBase dbInfo = null;
                     final String database = params.getDatabase();
-                    if("mysql".equalsIgnoreCase(database)){
+                    if ("mysql".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.MYSQL);
                         dbInfo = new Mysql();
-                    }else if("oracle".equalsIgnoreCase(database)){
+                    } else if ("oracle".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.ORACLE);
                         dbInfo = new Oracle();
-                    }else if("db2".equalsIgnoreCase(database)){
+                    } else if ("db2".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.DB2);
                         dbInfo = new Db2();
-                    }else if("derby".equalsIgnoreCase(database)){
+                    } else if ("derby".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.DERBY);
                         dbInfo = new Derby();
-                    }else if("h2".equalsIgnoreCase(database)){
+                    } else if ("h2".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.H2);
                         dbInfo = new H2();
-                    }else if("hsqldb".equalsIgnoreCase(database)){
+                    } else if ("hsqldb".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.HSQLDB);
                         dbInfo = new Hsqldb();
-                    }else if("informix".equalsIgnoreCase(database)){
+                    } else if ("informix".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.INFORMIX);
                         dbInfo = new Informix();
-                    }else if("postgresql".equalsIgnoreCase(database)){
+                    } else if ("postgresql".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.POSTGRESQL);
                         dbInfo = new PostgreSql();
-                    }else if("sqlite".equalsIgnoreCase(database)){
+                    } else if ("sqlite".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.SQLITE);
                         dbInfo = new Sqlite();
-                    }else if("sqlserver".equalsIgnoreCase(database)){
+                    } else if ("sqlserver".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.SQLSERVER);
                         dbInfo = new Sqlserver();
-                    }else if("sybase".equalsIgnoreCase(database)){
+                    } else if ("sybase".equalsIgnoreCase(database)) {
                         dbParams.setDatabase(DataBase.SYBASE);
                         dbInfo = new SyBase();
-                    }else{
-                        LOGGER.error("UNKNOWN DATABASE:" + database);
+                    } else {
+                        log.error("UNKNOWN DATABASE:" + database);
                         System.exit(1);
                     }
                     dbInfo.setDbParams(dbParams);
                     HikariCPManager.resetConnection(dbInfo);
                 }
 
-                if(cmd.hasOption("unload")){
-                    LOGGER.info("unload start ==>");
+                if (cmd.hasOption("unload")) {
+                    log.info("unload start ==>");
                     Unload unload = new Unload(params);
                     unload.toUnload();
-                }else if(cmd.hasOption("imp")){
-                    LOGGER.info("import start ==>");
-                    ImportData importData = new ImportData(params);
+                } else if (cmd.hasOption("imp")) {
+                    log.info("import start ==>");
+                    Import importData = new Import(params);
                     importData.imp();
-                }else{
+                } else {
                     help();
                 }
             }
         } catch (ParseException e) {
-            LOGGER.error(e.getMessage(),e);
+            log.error(e.getMessage(), e);
             help();
         }
     }
 
-    private void help(){
+    private void help() {
         HelpFormatter helpFormatter = new HelpFormatter();
         helpFormatter.printHelp("java com.huateng.oraload.App [-options]\r\noptions:\r\n", options);
         System.exit(0);
